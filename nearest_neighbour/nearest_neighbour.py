@@ -1,5 +1,3 @@
-
-
 def nearest_neighbour(graph, start):
     visited = set()
     path = []
@@ -19,7 +17,6 @@ def nearest_neighbour(graph, start):
                 nearest_distance = graph[current][neighbour]['weight']
 
         if nearest is None:
-
             break
 
         current = nearest

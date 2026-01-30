@@ -1,2 +1,5 @@
-networkx
-matplotlib
+networkx~=3.6.1
+matplotlib~=3.10.8
+pygad~=3.5.0
+numpy~=1.26.0
+acopy
