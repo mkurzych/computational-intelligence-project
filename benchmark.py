@@ -2,11 +2,11 @@ import time
 import csv
 from datetime import datetime
 from generator import Generator
-from christofides.christofides import christofides
-from brute_force.brute_force import brute_force
-from nearest_neighbour.nearest_neighbour import nearest_neighbour
-from genetic.genetic import genetic
-from ant_colony.ant_colony import ant_colony
+from christofides import christofides
+from brute_force import brute_force
+from nearest_neighbour import nearest_neighbour
+from genetic import genetic
+from ant_colony import ant_colony
 
 
 def run_algorithm(name, algorithm_func, graph, source_node=0):
