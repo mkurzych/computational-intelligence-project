@@ -1,43 +1,79 @@
 import networkx as nx
 import random
-import matplotlib.pyplot as plt
 
 class Generator:
     def __init__(self, nodes):
+        self.max_edge_retries = 50  # max retries per edge before backtracking
+        self.max_node_retries = 10   # max retries per node before removing it
         self.graph = self.generate(nodes)
 
-    def generate_weights(self):
-        for (u, v) in self.graph.edges:
-            rand = random.randint(1, 10)
-            self.graph.edges[u, v]['weight'] = rand
+    def check_triangle_with_edge(self, u, v, weight):
+        # for each node w that is connected to both u and v
+        for w in self.graph.nodes():
+            if w == u or w == v:
+                continue
 
-    def check_triangle_sides_condition(self):
-        for clique in nx.enumerate_all_cliques(self.graph):
-            if len(clique) == 3:
-                u, v, w = clique
-                if (self.graph[u][v]['weight'] + self.graph[u][w]['weight'] < self.graph[v][w]['weight'] or
-                        self.graph[u][v]['weight'] + self.graph[v][w]['weight'] < self.graph[u][w]['weight'] or
-                        self.graph[u][w]['weight'] + self.graph[v][w]['weight'] < self.graph[u][v]['weight']):
+            # check if w is connected to both u and v
+            has_uw = self.graph.has_edge(u, w) and 'weight' in self.graph[u][w]
+            has_vw = self.graph.has_edge(v, w) and 'weight' in self.graph[v][w]
+
+            if has_uw and has_vw:
+                uw = self.graph[u][w]['weight']
+                vw = self.graph[v][w]['weight']
+                uv = weight
+
+                # check all triangle inequality conditions
+                if uv + uw < vw or uv + vw < uw or uw + vw < uv:
                     return False
         return True
 
-    def generate(self, nodes):
-        self.graph = nx.complete_graph(nodes)
-        self.generate_weights()
-        while not self.check_triangle_sides_condition():
-            self.generate_weights()
+    def generate_edge_weight(self, u, v):
+        for attempt in range(self.max_edge_retries):
+            weight = random.randint(1, 10)
+            if self.check_triangle_with_edge(u, v, weight):
+                return weight
+        return None
+
+    def generate(self, num_nodes):
+        self.graph = nx.Graph()
+
+        # add nodes one by one
+        for node_idx in range(num_nodes):
+            success = self.add_node_with_edges(node_idx)
+
+            if not success:
+                # failed to add this node even after retries
+                return self.generate(num_nodes)
+
         return self.graph
 
+    def add_node_with_edges(self, new_node):
+        for retry in range(self.max_node_retries):
+            self.graph.add_node(new_node)
 
-def plot_graph(graph, path=None):
-    pos = nx.shell_layout(graph)
-    edge_labels = nx.get_edge_attributes(graph, "weight")
+            # try to connect to all existing nodes
+            success = True
+            edges_added = []
 
-    edge_colors = ['red' if path and ((u, v) in path or (v, u) in path) else 'black' for u, v in
-                   graph.edges(data=False)]
+            for existing_node in range(new_node):
+                weight = self.generate_edge_weight(existing_node, new_node)
 
-    nx.draw_networkx_nodes(graph, pos)
-    nx.draw_networkx_edges(graph, pos, edge_color=edge_colors)
-    nx.draw_networkx_edge_labels(graph, pos, edge_labels=edge_labels)
-    nx.draw_networkx_labels(graph, pos)
-    plt.show()
+                if weight is None:
+                    # failed to find valid weight for this edge
+                    success = False
+                    # remove the edges added so far
+                    for u, v in edges_added:
+                        self.graph.remove_edge(u, v)
+                    break
+                else:
+                    # add edge with valid weight
+                    self.graph.add_edge(existing_node, new_node, weight=weight)
+                    edges_added.append((existing_node, new_node))
+
+            if success:
+                return True
+
+        # failed to add node after all retries
+        if self.graph.has_node(new_node):
+            self.graph.remove_node(new_node)
+        return False
